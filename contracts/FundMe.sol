@@ -1,22 +1,56 @@
-//SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
+import "./PriceConverter.sol";
 
-contract Greeter {
-    string private greeting;
+error FundMe__NotOwner();
 
-    constructor(string memory _greeting) {
-        console.log("Deploying a Greeter with greeting:", _greeting);
-        greeting = _greeting;
+contract FundMe {
+    using PriceConverter for uint256;
+
+    uint256 immutable i_minUSD;
+    address immutable i_owner;
+    address[] funders;
+    mapping(address => uint256) addressAmountMap;
+    AggregatorV3Interface public immutable i_priceFeed;
+
+    modifier onlyOwner() {
+        // require(msg.sender == i_owner, "You are not the owner");
+        if (msg.sender != i_owner) revert FundMe__NotOwner();
+        _;
     }
 
-    function greet() public view returns (string memory) {
-        return greeting;
+    constructor(uint256 _minUSD, address _priceFeedAddress) {
+        i_owner = msg.sender;
+        i_minUSD = _minUSD * 1e18;
+        i_priceFeed = AggregatorV3Interface(_priceFeedAddress);
     }
 
-    function setGreeting(string memory _greeting) public {
-        console.log("Changing greeting from '%s' to '%s'", greeting, _greeting);
-        greeting = _greeting;
+    receive() external payable {
+        fund();
+    }
+
+    fallback() external payable {
+        fund();
+    }
+
+    function fund() public payable {
+        require(
+            msg.value.getConversion(i_priceFeed) >= i_minUSD,
+            "Funding amount should be greater than or equal to 10 dollars"
+        );
+        funders.push(msg.sender);
+        addressAmountMap[msg.sender] += msg.value;
+    }
+
+    function withdraw() public onlyOwner {
+        for (uint256 i = 0; i < funders.length; i++) {
+            addressAmountMap[funders[i]] = 0;
+        }
+        funders = new address[](0);
+        (bool callSend, ) = payable(msg.sender).call{
+            value: address(this).balance
+        }("");
+        require(callSend, "Withdrawal failed.");
     }
 }
