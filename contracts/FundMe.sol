@@ -8,11 +8,11 @@ error FundMe__NotOwner();
 contract FundMe {
     using PriceConverter for uint256;
 
-    uint256 immutable i_minUSD;
-    address immutable i_owner;
-    address[] funders;
-    mapping(address => uint256) addressAmountMap;
-    AggregatorV3Interface public immutable i_priceFeed;
+    uint256 private immutable i_minUSD;
+    address private immutable i_owner;
+    address[] public s_funders;
+    mapping(address => uint256) private s_addressAmountMap;
+    AggregatorV3Interface private immutable i_priceFeed;
 
     modifier onlyOwner() {
         // require(msg.sender == i_owner, "You are not the owner");
@@ -37,20 +37,59 @@ contract FundMe {
     function fund() public payable {
         require(
             msg.value.getConversion(i_priceFeed) >= i_minUSD,
-            "Funding amount should be greater than or equal to 10 dollars"
+            "You need to spend more ETH"
         );
-        funders.push(msg.sender);
-        addressAmountMap[msg.sender] += msg.value;
+        s_funders.push(msg.sender);
+        s_addressAmountMap[msg.sender] += msg.value;
     }
 
     function withdraw() public onlyOwner {
-        for (uint256 i = 0; i < funders.length; i++) {
-            addressAmountMap[funders[i]] = 0;
+        // for (uint256 i = 0; i < s_funders.length; i++) {
+        //     s_addressAmountMap[s_funders[i]] = 0;
+        // }
+        // s_funders = new address[](0);
+        // (bool callSend, ) = payable(msg.sender).call{
+        //     value: address(this).balance
+        // }("");
+        // require(callSend, "Withdrawal failed.");
+
+        address[] memory funders = s_funders;
+        for (
+            uint256 funderIndex = 0;
+            funderIndex < funders.length;
+            funderIndex++
+        ) {
+            address funder = funders[funderIndex];
+            s_addressAmountMap[funder] = 0;
         }
-        funders = new address[](0);
+        s_funders = new address[](0);
         (bool callSend, ) = payable(msg.sender).call{
             value: address(this).balance
         }("");
         require(callSend, "Withdrawal failed.");
+    }
+
+    function getMinimumUSD() public view returns (uint256) {
+        return i_minUSD;
+    }
+
+    function getOwner() public view returns (address) {
+        return i_owner;
+    }
+
+    function getFunder(uint256 index) public view returns (address) {
+        return s_funders[index];
+    }
+
+    function getAddressToAmountFunded(address funder)
+        public
+        view
+        returns (uint256)
+    {
+        return s_addressAmountMap[funder];
+    }
+
+    function getPriceFeed() public view returns (AggregatorV3Interface) {
+        return i_priceFeed;
     }
 }

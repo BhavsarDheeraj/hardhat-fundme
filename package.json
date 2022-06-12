@@ -2,8 +2,8 @@
   "name": "hardhat-fundme",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "git@github-personal:BhavsarDheeraj/hardhat-fundme.git",
-  "author": "0xdhee <dheeraj@questt.com>",
+  "repository": "https://github.com/BhavsarDheeraj/hardhat-fundme",
+  "author": "Dheeraj Bhavsar",
   "license": "MIT",
   "devDependencies": {
     "@chainlink/contracts": "^0.4.1",
@@ -28,5 +28,10 @@
     "prettier-plugin-solidity": "^1.0.0-beta.13",
     "solhint": "^3.3.6",
     "solidity-coverage": "^0.7.16"
+  },
+  "scripts": {
+    "test": "yarn hardhat test",
+    "test:staging": "yarn hardhat test --network rinkeby",
+    "coverage": "yarn hardhat coverage"
   }
 }
